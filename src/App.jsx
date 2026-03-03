@@ -101,7 +101,7 @@ function CurrentBlockView() {
     return (
       <div className="page">
         <header className="header">
-          <h1 className="title">同道J人</h1>
+          <h1 className="title">Way-J</h1>
           <button className="refresh-button" onClick={handleRefreshNow}>
             刷新
           </button>
@@ -163,7 +163,7 @@ function CurrentBlockView() {
   return (
     <div className="page">
       <header className="header">
-        <h1 className="title">同道J人</h1>
+        <h1 className="title">Way-J</h1>
         <button className="refresh-button" onClick={handleRefreshNow}>
           刷新
         </button>
