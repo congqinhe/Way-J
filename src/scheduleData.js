@@ -14,200 +14,82 @@ export const BlockCategory = {
   WORK: 'work',
   WEEKEND_GROWTH: 'weekend_growth',
   WEEKEND_PLANNING: 'weekend_planning',
+  PHYSICAL: 'physical',
   FREE: 'free',
 };
 
+/** 状态类别：5 个高层分类，用于 badge 展示，与细化标签（title）区分 */
+export const StatusCategory = {
+  RECOVER: '恢复',
+  STRATEGY: '战略思考',
+  EXECUTE: '落地执行',
+  PHYSICAL: '体能增强',
+  RELATIONSHIP: '关系',
+  FREE: '自由时间',
+};
+
+/** 状态类别 → 可选细化标签（用于「改做别的」选择） */
+export const CATEGORY_TAGS = {
+  [StatusCategory.RECOVER]: ['居家整备', '空白转场', '工位早餐', '午间回血', '通勤泄压', '晚间补给', '居家/转场', '灵感捕捉', '兴趣娱乐'],
+  [StatusCategory.STRATEGY]: ['深度输入', '灵感捕捉', '碎片输入', '复盘规划'],
+  [StatusCategory.EXECUTE]: ['职业工作', '个人成长', '生活处理'],
+  [StatusCategory.PHYSICAL]: ['身体维护', '系统训练'],
+  [StatusCategory.RELATIONSHIP]: ['同行交流', '社交互动', '家庭陪伴'],
+  [StatusCategory.FREE]: ['自由时间'],
+};
+
 // 核心时间块定义（固定模板）
+// 工作日：周一/三/五 (高能产出日)、周二/四 (蓄能平衡日)、周六 (生活维护日)、周日 (战略规划日)
 export const scheduleBlocks = [
-  // 工作日早间地铁 7:30–8:10
-  ...[1, 3, 5].map((weekday) => ({
-    id: `morning-${weekday}`,
-    weekday,
-    start: time(7, 30),
-    end: time(8, 10),
-    category: BlockCategory.MORNING_COMMUTE,
-    title: '早间地铁 · AI/产品方法阅读',
-    description:
-      '适合：阅读专业内容、看行业报告、做结构笔记、听高密度播客。\n不适合：刷碎片、社交、卖衣服、回无意义消息。',
-  })),
-  ...[2, 4].map((weekday) => ({
-    id: `morning-${weekday}`,
-    weekday,
-    start: time(7, 30),
-    end: time(8, 10),
-    category: BlockCategory.MORNING_COMMUTE,
-    title: '早间地铁 · 自我成长/行业趋势',
-    description:
-      '适合：自我成长类书籍、行业趋势文章、结构化记录。\n不适合：刷碎片、无目的社交。',
-  })),
-
-  // 工作时间（只记录）
-  ...[1, 2, 3, 4, 5].flatMap((weekday) => [
-    {
-      id: `work-am-${weekday}`,
-      weekday,
-      start: time(9, 0),
-      end: time(11, 0),
-      category: BlockCategory.WORK,
-      title: '工作（记录）',
-      description: '固定工作时间，仅作为时间背景记录。',
-    },
-    {
-      id: `work-pm-${weekday}`,
-      weekday,
-      start: time(13, 0),
-      end: time(17, 30),
-      category: BlockCategory.WORK,
-      title: '工作（记录）',
-      description: '固定工作时间，仅作为时间背景记录。',
-    },
+  // ========== 周一 / 三 / 五 (高能产出日) ==========
+  // 数据结构：title=细化标签，statusCategory=状态类别
+  ...[1, 3, 5].flatMap((weekday) => [
+    { id: `recover-${weekday}-06`, weekday, start: time(6, 0), end: time(7, 0), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '居家整备', description: '起床、洗漱、整理个人仪表，简单收拾居家环境，为出门做好准备' },
+    { id: `recover-${weekday}-07a`, weekday, start: time(7, 0), end: time(7, 30), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '空白转场', description: '步行、换乘，利用物理位移时间做呼吸调整或简单心理预热' },
+    { id: `growth-${weekday}-0730`, weekday, start: time(7, 30), end: time(8, 30), category: BlockCategory.DEEP_GROWTH, statusCategory: StatusCategory.STRATEGY, title: '深度输入', description: '深度英语学习或严肃阅读，专注获取高价值信息，培养思考习惯' },
+    { id: `recover-${weekday}-0830`, weekday, start: time(8, 30), end: time(9, 0), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '工位早餐', description: '在工位补充能量，慢慢调整工作心态，做好软启动' },
+    { id: `work-am-${weekday}`, weekday, start: time(9, 0), end: time(11, 0), category: BlockCategory.WORK, statusCategory: StatusCategory.EXECUTE, title: '职业工作', description: '专注推进核心工作任务，处理优先级高的事项并产出可交付成果' },
+    { id: `recover-${weekday}-11`, weekday, start: time(11, 0), end: time(13, 0), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '午间回血', description: '午餐、午休，彻底放松身心，为下午高强度工作蓄能' },
+    { id: `work-pm-${weekday}`, weekday, start: time(13, 0), end: time(17, 30), category: BlockCategory.WORK, statusCategory: StatusCategory.EXECUTE, title: '职业工作', description: '深度执行核心工作，保持持续专注与产出' },
+    { id: `recover-${weekday}-1730`, weekday, start: time(17, 30), end: time(18, 30), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '通勤泄压', description: '下班通勤，听音乐、阅读或小憩，让大脑与身体放松' },
+    { id: `growth-${weekday}-1830`, weekday, start: time(18, 30), end: time(19, 30), category: BlockCategory.DEEP_GROWTH, statusCategory: StatusCategory.STRATEGY, title: '碎片输入', description: '利用零散时间吸收英语听力或行业资讯，点状积累信息' },
+    { id: `recover-${weekday}-1930`, weekday, start: time(19, 30), end: time(20, 15), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '晚间补给', description: '晚餐与餐后小憩，身体能量回填，短暂休息恢复精神' },
+    { id: `growth-${weekday}-2015`, weekday, start: time(20, 15), end: time(21, 45), category: BlockCategory.DEEP_GROWTH, statusCategory: StatusCategory.EXECUTE, title: '个人成长', description: '深度练习、技能打磨或作品产出，专注提升自身能力' },
+    { id: `recover-${weekday}-2145`, weekday, start: time(21, 45), end: time(22, 0), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '居家整备', description: '睡前洗漱、整理次日所需物品，静心准备入睡' },
   ]),
 
-  // 晚间地铁 18:30–19:10
-  {
-    id: 'evening-1',
-    weekday: 1,
-    start: time(18, 30),
-    end: time(19, 10),
-    category: BlockCategory.EVENING_COMMUTE,
-    title: '晚间地铁 · 本周工作优先级梳理',
-    description:
-      '认知下降，不做重学习。用 10 分钟梳理本周工作优先级，余下时间轻松放松（音乐/随意看）。',
-  },
-  {
-    id: 'evening-3',
-    weekday: 3,
-    start: time(18, 30),
-    end: time(19, 10),
-    category: BlockCategory.EVENING_COMMUTE,
-    title: '晚间地铁 · 项目风险扫描',
-    description:
-      '认知下降，不做重学习。用 10 分钟扫一眼项目风险点，余下时间轻松放松。',
-  },
-  {
-    id: 'evening-5',
-    weekday: 5,
-    start: time(18, 30),
-    end: time(19, 10),
-    category: BlockCategory.EVENING_COMMUTE,
-    title: '晚间地铁 · 一周复盘',
-    description: '简单回顾本周：做了什么、有什么情绪、下一周想调整什么。',
-  },
-  ...[2, 4].map((weekday) => ({
-    id: `evening-${weekday}`,
-    weekday,
-    start: time(18, 30),
-    end: time(19, 10),
-    category: BlockCategory.EVENING_COMMUTE,
-    title: '晚间地铁 · 轻松放松',
-    description: '认知下降时段，不做重学习。可以听音乐、随意看看，不做自责。',
-  })),
-
-  // 晚上 20:00–22:00
-  // 周一 / 周三：成长夜
-  ...[1, 3].flatMap((weekday) => [
-    {
-      id: `growth-main-${weekday}`,
-      weekday,
-      start: time(20, 0),
-      end: time(21, 30),
-      category: BlockCategory.DEEP_GROWTH,
-      title: '成长夜 · 深度成长',
-      description:
-        '输出思考、写结构、做方法沉淀。本周仅两晚深度成长，不追求每天卓越，防止透支。',
-    },
-    {
-      id: `growth-end-${weekday}`,
-      weekday,
-      start: time(21, 30),
-      end: time(22, 0),
-      category: BlockCategory.RELAX,
-      title: '成长夜 · 放松收尾',
-      description: '用 30 分钟做温和收尾，例如拉伸、轻阅读、准备睡前状态。',
-    },
+  // ========== 周二 / 周四 (蓄能平衡日) ==========
+  ...[2, 4].flatMap((weekday) => [
+    { id: `recover-${weekday}-06`, weekday, start: time(6, 0), end: time(7, 30), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '居家/转场', description: '起床、居家整备，通勤换乘，慢慢从休息模式过渡到工作模式' },
+    { id: `growth-${weekday}-0730`, weekday, start: time(7, 30), end: time(8, 30), category: BlockCategory.DEEP_GROWTH, statusCategory: StatusCategory.STRATEGY, title: '灵感捕捉', description: '随性阅读、逻辑推演或记录灵感，激活创造思维' },
+    { id: `recover-${weekday}-0830`, weekday, start: time(8, 30), end: time(9, 0), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '工位早餐', description: '补充早餐，调整心态，轻松进入上午工作节奏' },
+    { id: `work-am-${weekday}`, weekday, start: time(9, 0), end: time(11, 0), category: BlockCategory.WORK, statusCategory: StatusCategory.EXECUTE, title: '职业工作', description: '工作任务推进，完成关键事项，保持适度专注' },
+    { id: `recover-${weekday}-11`, weekday, start: time(11, 0), end: time(13, 0), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '午间回血', description: '午餐、午休，彻底放松身心，为下午积蓄精力' },
+    { id: `work-pm-${weekday}`, weekday, start: time(13, 0), end: time(17, 30), category: BlockCategory.WORK, statusCategory: StatusCategory.EXECUTE, title: '职业工作', description: '延续下午核心工作任务，高效推进与产出' },
+    { id: `recover-${weekday}-1730`, weekday, start: time(17, 30), end: time(18, 30), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '通勤泄压', description: '下班通勤，消遣或小憩，放松一天积累的紧张感' },
+    { id: `recover-${weekday}-1830`, weekday, start: time(18, 30), end: time(19, 30), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '灵感捕捉', description: '地铁通勤、听歌、发呆等方式，让大脑自由漂浮，彻底解压' },
+    { id: `physical-${weekday}`, weekday, start: time(19, 30), end: time(20, 10), category: BlockCategory.PHYSICAL, statusCategory: StatusCategory.PHYSICAL, title: '身体维护', description: '快走、力量训练或拉伸，保持体能与身体活力' },
+    { id: `recover-${weekday}-2010`, weekday, start: time(20, 10), end: time(20, 50), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '晚间补给', description: '晚餐、体力回填，轻松舒适为夜间活动蓄能' },
+    { id: `relationship-${weekday}`, weekday, start: time(20, 50), end: time(22, 0), category: BlockCategory.RELATIONSHIP, statusCategory: StatusCategory.RELATIONSHIP, title: '同行交流', description: '与同行进行专业探讨、认知置换或经验交流，拓展视野' },
   ]),
 
-  // 周二 / 周四：关系夜
-  ...[2, 4].map((weekday) => ({
-    id: `relationship-${weekday}`,
-    weekday,
-    start: time(20, 0),
-    end: time(22, 0),
-    category: BlockCategory.RELATIONSHIP,
-    title: '关系夜 · 陪伴与互动',
-    description: '陪伴孩子、聊天、家庭互动。保障情感流动，而不是被消耗在无目的刷手机中。',
-  })),
+  // ========== 周六 (生活维护日) ==========
+  { id: 'recover-6-06', weekday: 6, start: time(6, 0), end: time(9, 0), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '居家整备', description: '自然醒、慢早餐、居家自理，轻松开始周末' },
+  { id: 'physical-6', weekday: 6, start: time(9, 0), end: time(10, 0), category: BlockCategory.PHYSICAL, statusCategory: StatusCategory.PHYSICAL, title: '系统训练', description: '系统性健身，保持身体活力与健康' },
+  { id: 'life-6', weekday: 6, start: time(10, 0), end: time(11, 0), category: BlockCategory.LIFE_MAINTENANCE, statusCategory: StatusCategory.EXECUTE, title: '生活处理', description: '家务整理、采购等生活杂事，保持生活秩序' },
+  { id: 'recover-6-11', weekday: 6, start: time(11, 0), end: time(13, 30), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '午间回血', description: '慢午餐、午休，彻底放松身心' },
+  { id: 'relationship-6', weekday: 6, start: time(13, 30), end: time(18, 0), category: BlockCategory.RELATIONSHIP, statusCategory: StatusCategory.RELATIONSHIP, title: '社交互动', description: '朋友聚餐、非职业社交维护，维系社会关系' },
+  { id: 'recover-6-18', weekday: 6, start: time(18, 0), end: time(19, 30), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '晚间补给', description: '周末晚餐与自由休息，享受放松时光' },
+  { id: 'recover-6-1930', weekday: 6, start: time(19, 30), end: time(22, 0), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '兴趣娱乐', description: '电影、游戏、刷剧等纯粹的兴趣活动，获得快乐与释放' },
 
-  // 周五：松弛夜
-  {
-    id: 'relax-5',
-    weekday: 5,
-    start: time(20, 0),
-    end: time(22, 0),
-    category: BlockCategory.RELAX,
-    title: '松弛夜 · 无压力休息',
-    description: '完全不安排成长。可以看剧、发呆，关键是“无负担感”，为防止 burnout。',
-  },
-
-  // 周六
-  {
-    id: 'life-6-morning',
-    weekday: 6,
-    start: time(9, 0),
-    end: time(11, 0),
-    category: BlockCategory.LIFE_MAINTENANCE,
-    title: '生活维护 · 集中处理',
-    description:
-      '整理衣柜、空间重置、财务处理等，一次性集中处理，避免工作日晚上被这些小事分散焦虑。',
-  },
-  {
-    id: 'weekend-6-afternoon',
-    weekday: 6,
-    start: time(13, 30),
-    end: time(18, 0),
-    category: BlockCategory.RELATIONSHIP,
-    title: '周六下午 · 陪伴时间',
-    description: '半天陪伴家人或重要他人，保证高质量在场。',
-  },
-  {
-    id: 'weekend-6-night',
-    weekday: 6,
-    start: time(19, 30),
-    end: time(22, 0),
-    category: BlockCategory.FREE,
-    title: '周六晚上 · 自由时间',
-    description: '不做刚性安排，允许自己随心所欲地放松或做感兴趣的事。',
-  },
-
-  // 周日
-  {
-    id: 'growth-7-morning',
-    weekday: 0, // 周日
-    start: time(9, 0),
-    end: time(12, 0),
-    category: BlockCategory.WEEKEND_GROWTH,
-    title: '周日早上 · 3 小时深度成长',
-    description: '本周最大成长块。可以做系统学习、输出、项目推进等高价值任务。',
-  },
-  {
-    id: 'weekend-7-afternoon',
-    weekday: 0,
-    start: time(13, 30),
-    end: time(18, 0),
-    category: BlockCategory.RELAX,
-    title: '周日下午 · 休闲',
-    description: '允许自己放松、充电，不做过度功利化安排。',
-  },
-  {
-    id: 'weekend-7-night-planning',
-    weekday: 0,
-    start: time(20, 30),
-    end: time(21, 0),
-    category: BlockCategory.WEEKEND_PLANNING,
-    title: '周日晚 · 下周规划 30 分钟',
-    description:
-      '回顾本周执行情况，写出下周几个关键关注点。只需简短，不做冗长反省。',
-  },
+  // ========== 周日 (战略规划日) ==========
+  { id: 'recover-0-06', weekday: 0, start: time(6, 0), end: time(9, 0), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '居家整备', description: '充足睡眠、晨间唤醒，身体和精神完全恢复' },
+  { id: 'growth-0-morning', weekday: 0, start: time(9, 0), end: time(12, 0), category: BlockCategory.WEEKEND_PLANNING, statusCategory: StatusCategory.STRATEGY, title: '复盘规划', description: '职业方向复盘、深度学习与长期策略思考，形成行动计划' },
+  { id: 'recover-0-12', weekday: 0, start: time(12, 0), end: time(13, 30), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '午间回血', description: '午餐、午间充能，为下午活动蓄力' },
+  { id: 'relationship-0', weekday: 0, start: time(13, 30), end: time(18, 0), category: BlockCategory.RELATIONSHIP, statusCategory: StatusCategory.RELATIONSHIP, title: '家庭陪伴', description: '陪伴家人，进行家庭沟通与情感维护' },
+  { id: 'recover-0-18', weekday: 0, start: time(18, 0), end: time(20, 30), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '兴趣娱乐', description: '晚餐、休闲活动，为下周蓄能放松身心' },
+  { id: 'growth-0-planning', weekday: 0, start: time(20, 30), end: time(21, 0), category: BlockCategory.WEEKEND_PLANNING, statusCategory: StatusCategory.STRATEGY, title: '复盘规划', description: '总结本周经验，确认下周节奏与目标' },
+  { id: 'recover-0-21', weekday: 0, start: time(21, 0), end: time(22, 0), category: BlockCategory.RELAX, statusCategory: StatusCategory.RECOVER, title: '居家整备', description: '睡前准备、静心，为高质量睡眠做准备' },
 ];
 
 // ---------- 用户覆盖层（确认后的日程调整） ----------
@@ -279,6 +161,7 @@ function getEffectiveBlocksList() {
         ...block,
         title: override.title ?? block.title,
         description: override.description ?? block.description,
+        statusCategory: block.statusCategory ?? StatusCategory.FREE,
       };
     })
     .filter(Boolean);
@@ -306,6 +189,7 @@ function getEffectiveBlocksList() {
       start: start ? { hour: start.hour, minute: start.minute } : { hour: 0, minute: 0 },
       end: end ? { hour: end.hour, minute: end.minute } : { hour: 0, minute: 0 },
       category: BlockCategory.FREE,
+      statusCategory: StatusCategory.FREE,
       title: o.title || '自定义',
       description: o.description || '',
     };
@@ -387,7 +271,6 @@ export function getScheduleSummary() {
     lines.push('');
   }
 
-  lines.push('原则：成长夜每周只安排 2 次；生活维护集中处理不分散；不过度塞满，留出松弛与情感流动。');
+  lines.push('原则：周一三五高能产出、周二四蓄能平衡、周六生活维护、周日战略规划；不过度塞满，留出松弛与情感流动。');
   return lines.join('\n');
 }
-

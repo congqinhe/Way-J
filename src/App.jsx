@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { getBlocksByWeekday, getCurrentBlock, getScheduleSummary, WEEKDAYS, BlockCategory, loadOverrides, saveOverrides, findTemplateBlock, REMOVED_OVERRIDE_TITLE } from './scheduleData.js';
+import { getBlocksByWeekday, getCurrentBlock, getScheduleSummary, WEEKDAYS, BlockCategory, StatusCategory, CATEGORY_TAGS, loadOverrides, saveOverrides, findTemplateBlock, REMOVED_OVERRIDE_TITLE } from './scheduleData.js';
 import * as zhipu from './services/zhipu.js';
 import { loadChatMessages, saveChatMessages } from './utils/chatStorage.js';
 import { parseScheduleUpdate } from './utils/parseScheduleUpdate.js';
@@ -7,8 +7,8 @@ import { saveExecutionRecord, loadExecutionLog, getExecutionHistorySummary, STAT
 
 const STATUS_OPTIONS = [
   { key: 'done', label: '按计划执行了' },
-  { key: 'rest', label: '今天改成休息' },
   { key: 'changed', label: '今天临时改做别的' },
+  { key: 'rest', label: '今天改成休息' },
 ];
 
 function formatTimeRange(block) {
@@ -17,30 +17,23 @@ function formatTimeRange(block) {
   return `${pad(start.hour)}:${pad(start.minute)}–${pad(end.hour)}:${pad(end.minute)}`;
 }
 
-function getCategoryTag(category) {
-  switch (category) {
-    case BlockCategory.MORNING_COMMUTE:
-      return '轻深度输入';
-    case BlockCategory.EVENING_COMMUTE:
-      return '轻整理/复盘';
-    case BlockCategory.DEEP_GROWTH:
-      return '深度成长';
-    case BlockCategory.RELATIONSHIP:
-      return '关系/陪伴';
-    case BlockCategory.RELAX:
-      return '松弛休息';
-    case BlockCategory.LIFE_MAINTENANCE:
-      return '生活维护';
-    case BlockCategory.WORK:
-      return '工作记录';
-    case BlockCategory.WEEKEND_GROWTH:
-      return '周末深度成长';
-    case BlockCategory.WEEKEND_PLANNING:
-      return '规划';
-    case BlockCategory.FREE:
-    default:
-      return '自由时间';
-  }
+/** 获取 block 的状态类别展示（5 类：恢复/战略思考/落地执行/体能增强/关系），与细化标签（title）区分 */
+function getStatusCategoryDisplay(block) {
+  if (block?.statusCategory) return block.statusCategory;
+  return getStatusCategoryFromCategory(block?.category);
+}
+/** BlockCategory 到 状态类别的映射（用于无 statusCategory 的旧数据） */
+function getStatusCategoryFromCategory(category) {
+  const map = {
+    [BlockCategory.RELAX]: StatusCategory.RECOVER,
+    [BlockCategory.DEEP_GROWTH]: StatusCategory.STRATEGY,
+    [BlockCategory.WEEKEND_PLANNING]: StatusCategory.STRATEGY,
+    [BlockCategory.WORK]: StatusCategory.EXECUTE,
+    [BlockCategory.LIFE_MAINTENANCE]: StatusCategory.EXECUTE,
+    [BlockCategory.PHYSICAL]: StatusCategory.PHYSICAL,
+    [BlockCategory.RELATIONSHIP]: StatusCategory.RELATIONSHIP,
+  };
+  return map[category] || StatusCategory.FREE;
 }
 
 function getTodayKey(date = new Date()) {
@@ -71,15 +64,33 @@ function CurrentBlockView() {
   const [now, setNow] = useState(() => new Date());
   const [refreshFlag, setRefreshFlag] = useState(0);
   const [recordsExpanded, setRecordsExpanded] = useState(false);
+  const [showChangedInput, setShowChangedInput] = useState(false);
+  const [changedCategory, setChangedCategory] = useState(StatusCategory.RECOVER);
+  const [changedTag, setChangedTag] = useState('');
+  const [changedTimeStart, setChangedTimeStart] = useState('');
+  const [changedTimeEnd, setChangedTimeEnd] = useState('');
+  const [changedDescription, setChangedDescription] = useState('');
 
   const currentBlock = useMemo(() => getCurrentBlock(now), [now, refreshFlag]);
   const dateKey = useMemo(() => getTodayKey(now), [now]);
 
   const status = currentBlock ? loadStatus(dateKey, currentBlock.id) : null;
 
-  const handleStatusChange = (nextStatus) => {
+  const initChangedForm = () => {
+    const tr = formatTimeRange(currentBlock);
+    const [start, end] = tr.split('–');
+    setChangedTimeStart(start || '');
+    setChangedTimeEnd(end || '');
+    setChangedCategory(StatusCategory.RECOVER);
+    setChangedTag('');
+    setChangedDescription('');
+  };
+
+  const handleStatusChange = (nextStatus, opts = {}) => {
     if (!currentBlock) return;
+    const { changedTo, changedCategory: cat, changedTag: tag, changedTimeStart: tStart, changedTimeEnd: tEnd, changedDescription: desc } = typeof opts === 'object' ? opts : {};
     saveStatus(dateKey, currentBlock.id, nextStatus);
+    const timeRange = (tStart && tEnd) ? `${tStart}–${tEnd}` : formatTimeRange(currentBlock);
     saveExecutionRecord({
       dateKey,
       blockId: currentBlock.id,
@@ -87,8 +98,12 @@ function CurrentBlockView() {
       category: currentBlock.category,
       status: nextStatus,
       weekday: currentBlock.weekday,
-      timeRange: formatTimeRange(currentBlock),
+      timeRange,
+      changedTo: nextStatus === 'changed' ? (tag || changedTo || undefined) : undefined,
+      changedCategory: nextStatus === 'changed' && cat ? cat : undefined,
+      changedDescription: nextStatus === 'changed' && desc ? desc : undefined,
     });
+    setShowChangedInput(false);
     setRefreshFlag((x) => x + 1);
   };
 
@@ -135,16 +150,23 @@ function CurrentBlockView() {
                   }
                   return (
                   <ul className="execution-record-list">
-                    {records.map((r, i) => (
-                      <li key={`${r.dateKey}-${r.blockId}-${i}`} className="execution-record-item">
-                        <span className="execution-record-date">
-                          {r.dateKey ? `${Number(r.dateKey.slice(5, 7))}/${Number(r.dateKey.slice(8, 10))}` : ''} {r.weekday != null ? WEEKDAYS[r.weekday] : ''}
-                        </span>
-                        <span className="execution-record-time">{r.timeRange}</span>
-                        <span className="execution-record-title">{r.title}</span>
-                        <span className="execution-record-status">{STATUS_LABELS[r.status] || r.status}</span>
-                      </li>
-                    ))}
+                    {records.map((r, i) => {
+                      const statusDisplay = r.status === 'changed' && (r.changedTo || r.changedTag) ? `改做：${r.changedTo || r.changedTag}${r.changedCategory ? `（${r.changedCategory}）` : ''}` : (STATUS_LABELS[r.status] || r.status);
+                      const timeDisplay = r.timeRange;
+                      return (
+                        <li key={`${r.dateKey}-${r.blockId}-${i}`} className="execution-record-item">
+                          <div className="execution-record-main">
+                            <span className="execution-record-date">
+                              {r.dateKey ? `${Number(r.dateKey.slice(5, 7))}/${Number(r.dateKey.slice(8, 10))}` : ''} {r.weekday != null ? WEEKDAYS[r.weekday] : ''}
+                            </span>
+                            <span className="execution-record-time">{timeDisplay}</span>
+                            <span className="execution-record-title">{r.title}</span>
+                            <span className="execution-record-status">{statusDisplay}</span>
+                          </div>
+                          {r.changedDescription && <p className="execution-record-desc">{r.changedDescription}</p>}
+                        </li>
+                      );
+                    })}
                   </ul>
                   );
                 })()}
@@ -158,7 +180,7 @@ function CurrentBlockView() {
 
   const weekdayName = WEEKDAYS[now.getDay()];
   const timeRange = formatTimeRange(currentBlock);
-  const categoryTag = getCategoryTag(currentBlock.category);
+  const statusCategoryDisplay = getStatusCategoryDisplay(currentBlock);
 
   return (
     <div className="page">
@@ -173,7 +195,7 @@ function CurrentBlockView() {
         <section className="card">
           <div className="card-header">
             <span className="badge">{weekdayName}</span>
-            <span className="badge badge-category">{categoryTag}</span>
+            <span className="badge badge-category">{statusCategoryDisplay}</span>
           </div>
           <h2 className="card-title">{currentBlock.title}</h2>
           <p className="card-subtitle">{timeRange}</p>
@@ -194,12 +216,56 @@ function CurrentBlockView() {
               <button
                 key={opt.key}
                 className={`status-button ${status === opt.key ? 'status-button-active' : ''}`}
-                onClick={() => handleStatusChange(opt.key)}
+                onClick={() => {
+                  if (opt.key === 'changed') {
+                    initChangedForm();
+                    setShowChangedInput(true);
+                  } else {
+                    handleStatusChange(opt.key);
+                  }
+                }}
               >
                 {opt.label}
               </button>
             ))}
           </div>
+          {showChangedInput && (
+            <div className="changed-input-row">
+              <div className="changed-field">
+                <label className="changed-label">时间</label>
+                <div className="changed-time-row">
+                  <input type="time" className="changed-time" value={changedTimeStart} onChange={(e) => setChangedTimeStart(e.target.value)} />
+                  <span className="changed-time-sep">–</span>
+                  <input type="time" className="changed-time" value={changedTimeEnd} onChange={(e) => setChangedTimeEnd(e.target.value)} />
+                </div>
+              </div>
+              <div className="changed-field">
+                <label className="changed-label">类别</label>
+                <select className="changed-select" value={changedCategory} onChange={(e) => { setChangedCategory(e.target.value); setChangedTag(''); }}>
+                  {Object.values(StatusCategory).filter((v) => v !== StatusCategory.FREE).map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="changed-field">
+                <label className="changed-label">标签</label>
+                <select className="changed-select" value={changedTag} onChange={(e) => setChangedTag(e.target.value)}>
+                  <option value="">请选择</option>
+                  {(CATEGORY_TAGS[changedCategory] || []).map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="changed-field">
+                <label className="changed-label">描述（选填）</label>
+                <textarea className="changed-textarea" placeholder="补充说明，如：读了《原则》前两章" value={changedDescription} onChange={(e) => setChangedDescription(e.target.value)} rows={2} />
+              </div>
+              <div className="changed-input-actions">
+                <button type="button" className="status-button" onClick={() => setShowChangedInput(false)}>取消</button>
+                <button type="button" className="status-button status-button-active" onClick={() => handleStatusChange('changed', { changedCategory, changedTag: changedTag || undefined, changedTimeStart: changedTimeStart || undefined, changedTimeEnd: changedTimeEnd || undefined, changedDescription: changedDescription.trim() || undefined })} disabled={!changedTag}>确认记录</button>
+              </div>
+            </div>
+          )}
           <p className="status-hint">
             这些只是温柔的记录，不是考核。你可以根据真实状态选择“休息”或“改做别的”，不需要自责。
           </p>
@@ -227,13 +293,19 @@ function CurrentBlockView() {
                       const [y, m, d] = (r.dateKey || '').split('-');
                       const dateStr = m && d ? `${Number(m)}/${Number(d)}` : r.dateKey;
                       const weekday = r.weekday != null ? WEEKDAYS[r.weekday] : '';
-                      const statusLabel = STATUS_LABELS[r.status] || r.status;
+                      const statusDisplay = r.status === 'changed' && (r.changedTo || r.changedTag)
+                        ? `改做：${r.changedTo || r.changedTag}${r.changedCategory ? `（${r.changedCategory}）` : ''}`
+                        : (STATUS_LABELS[r.status] || r.status);
+                      const timeDisplay = r.timeRange;
                       return (
                         <li key={`${r.dateKey}-${r.blockId}-${i}`} className="execution-record-item">
-                          <span className="execution-record-date">{dateStr} {weekday}</span>
-                          <span className="execution-record-time">{r.timeRange}</span>
-                          <span className="execution-record-title">{r.title}</span>
-                          <span className="execution-record-status">{statusLabel}</span>
+                          <div className="execution-record-main">
+                            <span className="execution-record-date">{dateStr} {weekday}</span>
+                            <span className="execution-record-time">{timeDisplay}</span>
+                            <span className="execution-record-title">{r.title}</span>
+                            <span className="execution-record-status">{statusDisplay}</span>
+                          </div>
+                          {r.changedDescription && <p className="execution-record-desc">{r.changedDescription}</p>}
                         </li>
                       );
                     })}
@@ -300,7 +372,7 @@ function WeekView() {
                   <div className="block-main">
                     <div className="block-title-row">
                       <span className="block-title">{block.title}</span>
-                      <span className="badge badge-small">{getCategoryTag(block.category)}</span>
+                      <span className="badge badge-small">{getStatusCategoryDisplay(block)}</span>
                     </div>
                     <p className="block-desc">
                       {block.description.length > 80
@@ -357,7 +429,7 @@ ${getExecutionHistorySummary() ? `\n${getExecutionHistorySummary()}\n` : ''}
 - changes：新增或替换的时段，每项必含 weekday、start、end、title、description。
 - removals：需要删除或让位的时段，每项含 weekday、start。当用户要求「推迟」「改时间」「取消」「删掉」某已有块时，必须把原有时段加入 removals，否则会保留原块导致冲突。例如：用户说「周一成长夜深度成长推迟到 21:00」，应输出 removals:[{"weekday":1,"start":"20:00"}] 和 changes:[{"weekday":1,"start":"21:00","end":"22:30","title":"成长夜·深度成长",...}]，这样原 20:00 块会被移除、21:00 新块被添加，避免重复。
 
-【记录过去任务】当用户说「帮我记录过去的任务」「记一下昨天/上周我做了XX」等，你需将用户描述的过去执行内容输出到 pastRecords 中，格式：pastRecords:[{"dateKey":"YYYY-MM-DD","start":"HH:mm","end":"HH:mm","title":"任务名","category":"deep_growth"等,"status":"done"}]。dateKey 为任务日期；start/end 为时段；category 可选值：morning_commute,evening_commute,deep_growth,relationship,relax,life_maintenance,work,weekend_growth,weekend_planning,free；status 默认 "done"。可仅输出 pastRecords 不输出 changes/removals。用户确认后前端会写入近期执行记录。`;
+【记录过去任务】当用户说「帮我记录过去的任务」「记一下昨天/上周我做了XX」等，你需将用户描述的过去执行内容输出到 pastRecords 中，格式：pastRecords:[{"dateKey":"YYYY-MM-DD","start":"HH:mm","end":"HH:mm","title":"细化标签","category":"BlockCategory","status":"done"}]。注意：title 为细化标签（如居家整备、深度输入、职业工作）；category 为状态类别对应的 BlockCategory 枚举（recover→relax, 战略思考→deep_growth/weekend_planning, 落地执行→work/life_maintenance, 体能增强→physical, 关系→relationship）。勿混淆 title 与 category。status 默认 "done"。`;
 }
 
 function ChatView() {

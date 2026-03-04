@@ -15,11 +15,14 @@ export const STATUS_LABELS = {
  * @param {object} record
  * @param {string} record.dateKey YYYY-MM-DD
  * @param {string} record.blockId
- * @param {string} record.title
- * @param {string} record.category BlockCategory
+ * @param {string} record.title 细化标签，如 居家整备、深度输入
+ * @param {string} record.category BlockCategory 枚举值，用于分组统计
  * @param {string} record.status 'done' | 'rest' | 'changed'
  * @param {number} record.weekday 0-6
  * @param {string} record.timeRange 如 "20:00–21:30"
+ * @param {string} [record.changedTo] status=changed 时，细化标签（兼容旧数据）
+ * @param {string} [record.changedCategory] status=changed 时，状态类别
+ * @param {string} [record.changedDescription] status=changed 时，补充描述
  */
 export function saveExecutionRecord(record) {
   if (typeof window === 'undefined') return;
@@ -72,7 +75,11 @@ export function getExecutionHistorySummary(limit = 50) {
     const dateStr = m && d ? `${Number(m)}/${Number(d)}` : r.dateKey;
     const weekday = r.weekday != null ? ['日', '一', '二', '三', '四', '五', '六'][r.weekday] : '';
     const statusLabel = STATUS_LABELS[r.status] || r.status;
-    lines.push(`- ${dateStr} 周${weekday} ${r.timeRange || ''} ${r.title || ''} ${statusLabel}`);
+    const suffix = r.status === 'changed' && (r.changedTo || r.changedTag)
+      ? ` 改做：${r.changedTo || r.changedTag}${r.changedCategory ? `（${r.changedCategory}）` : ''}${r.changedDescription ? ` ${r.changedDescription}` : ''}`
+      : ` ${statusLabel}`;
+    const timeStr = r.timeRange || '';
+    lines.push(`- ${dateStr} 周${weekday} ${timeStr} ${r.title || ''}${suffix}`);
   });
   return lines.join('\n');
 }

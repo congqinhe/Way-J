@@ -149,6 +149,71 @@ body {
   background: linear-gradient(135deg, #2563eb, #7c3aed);
 }
 
+.changed-input-row {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+.changed-field {
+  margin-bottom: 10px;
+}
+.changed-field:last-of-type {
+  margin-bottom: 12px;
+}
+.changed-label {
+  display: block;
+  font-size: 11px;
+  color: #9ca3af;
+  margin-bottom: 4px;
+}
+.changed-time-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.changed-time {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.8);
+  color: #e5e7eb;
+  font-size: 14px;
+}
+.changed-time-sep {
+  color: #6b7280;
+  font-size: 12px;
+}
+.changed-select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.8);
+  color: #e5e7eb;
+  font-size: 14px;
+}
+.changed-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.8);
+  color: #e5e7eb;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 48px;
+}
+.changed-textarea::placeholder {
+  color: #6b7280;
+}
+.changed-input-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
 .status-hint {
   margin-top: 8px;
   font-size: 12px;
@@ -197,8 +262,8 @@ body {
 
 .execution-record-item {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 10px;
+  flex-direction: column;
+  gap: 4px;
   padding: 6px 0;
   font-size: 12px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.12);
@@ -206,6 +271,20 @@ body {
 
 .execution-record-item:last-child {
   border-bottom: none;
+}
+
+.execution-record-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.execution-record-desc {
+  margin: 0;
+  padding-left: 0;
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.4;
 }
 
 .execution-record-date {
